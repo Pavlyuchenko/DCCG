@@ -46,7 +46,7 @@ def celsius_to_fahrenheit(celsius):
     Hint: in Python 3, `9/5` is 1.8, not 1. Section 5 of the README explains
     why that is worth checking rather than assuming.
     """
-    raise NotImplementedError("celsius_to_fahrenheit")
+    return celsius * (9/5) + 32
 
 
 def describe_box(width, height, depth):
@@ -64,7 +64,7 @@ def describe_box(width, height, depth):
 
     Hint: f-strings, and the `:.2f` format specifier. README section 6.
     """
-    raise NotImplementedError("describe_box")
+    return f"Box {width:.2f} x {height:.2f} x {depth:.2f} m, volume {(width * height*depth):.2f} m3"
 
 
 def every_other(items):
@@ -81,7 +81,7 @@ def every_other(items):
     been taught loops yet, so if you find yourself wanting one, reread
     README section 7 on slicing.
     """
-    raise NotImplementedError("every_other")
+    return items[::2]
 
 
 def list_stats(numbers):
@@ -100,4 +100,4 @@ def list_stats(numbers):
     Hint: `min()`, `max()`, `sum()` and `len()` are built in. Returning several
     values at once is just `return a, b, c`.
     """
-    raise NotImplementedError("list_stats")
+    return min(numbers), max(numbers), sum(numbers) / len(numbers)
