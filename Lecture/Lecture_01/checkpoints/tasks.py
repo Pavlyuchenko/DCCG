@@ -27,7 +27,7 @@ def rectangle_area(width, height):
     Hint: the whole body is one line. The trap is writing `print` instead of
     `return` -- see section 8 of the README.
     """
-    raise NotImplementedError("rectangle_area")
+    return width * height
 
 
 def celsius_to_fahrenheit(celsius):

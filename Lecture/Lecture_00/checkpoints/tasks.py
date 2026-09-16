@@ -23,4 +23,4 @@ def student_name() -> str:
 
         uv run check.py 01
     """
-    return "CHANGE ME"
+    return "Michal Pavlíček"
