@@ -9,7 +9,7 @@ Week 05 checkpoints — the Mesh data structure.
 
 Edit answers.py (copied from this starter). Run from the repository root:
 
-    uv run check.py 05
+        uv run check.py 05
 
 Every function here is PURE geometry logic: a mesh (or numbers) in, a mesh or
 a plain Python value out. No viewer, no files, no print. The figures in the
@@ -53,19 +53,39 @@ def grid_mesh(nx, ny, spacing=1.0):
     - Neighbouring faces must SHARE vertices, not each add their own. If they
       do not, the mesh looks perfect and its Euler characteristic is wrong.
     """
-    raise NotImplementedError("grid_mesh")
+    if nx < 1 or ny < 1:
+        raise ValueError("nx and ny must be at least 1")
+
+    mesh: Mesh = Mesh()
+
+    vertices = dict()
+    for y in range(ny + 1):
+        for x in range(nx + 1):
+            key = mesh.add_vertex(x=x * spacing, y=y * spacing, z=0)
+            vertices[(x, y)] = key
+
+    for y in range(ny):
+        for x in range(nx):
+            bottom_left = vertices[(x, y)]
+            bottom_right = vertices[(x + 1, y)]
+            top_right = vertices[(x + 1, y + 1)]
+            top_left = vertices[(x, y + 1)]
+
+            mesh.add_face([bottom_left, bottom_right, top_right, top_left])
+
+    return mesh
 
 
-def mesh_stats(mesh):
+def mesh_stats(mesh: Mesh):
     """Return a summary dictionary describing a mesh.
 
     Keys, exactly these:
-        "vertices"  : int   -- number of vertices
-        "edges"     : int   -- number of edges
-        "faces"     : int   -- number of faces
-        "euler"     : int   -- V - E + F
-        "boundary"  : int   -- number of DISTINCT vertices on the boundary
-        "area"      : float -- total area of all faces
+            "vertices"  : int   -- number of vertices
+            "edges"	 : int   -- number of edges
+            "faces"	 : int   -- number of faces
+            "euler"	 : int   -- V - E + F
+            "boundary"  : int   -- number of DISTINCT vertices on the boundary
+            "area"	  : float -- total area of all faces
 
     A summary like this is the cheapest possible regression test: one call
     tells you whether a change to your generator altered the topology.
@@ -80,15 +100,24 @@ def mesh_stats(mesh):
     with the first vertex repeated at the end -- so `len()` of it is one more
     than the number of distinct vertices. Count with
 
-        sum(mesh.is_vertex_on_boundary(k) for k in mesh.vertices())
+            sum(mesh.is_vertex_on_boundary(k) for k in mesh.vertices())
 
     or take `len(set(...))`. This is a genuine trap in a real library, and it
     is exactly the kind of thing that "looks right" until something counts it.
     """
-    raise NotImplementedError("mesh_stats")
+    stats = dict()
+
+    stats["vertices"] = mesh.number_of_vertices()
+    stats["edges"] = mesh.number_of_edges()
+    stats["faces"] = mesh.number_of_faces()
+    stats["euler"] = stats["vertices"] - stats["edges"] + stats["faces"]
+    stats["boundary"] = sum(mesh.is_vertex_on_boundary(k) for k in mesh.vertices())
+    stats["area"] = sum(mesh.face_area(face) for face in mesh.faces())
+
+    return stats
 
 
-def colour_by_height(mesh, low=(0, 0, 255), high=(255, 0, 0)):
+def colour_by_height(mesh: Mesh, low=(0, 0, 255), high=(255, 0, 0)):
     """Give every vertex a "color" attribute interpolated by its height.
 
     - the LOWEST vertex in the mesh gets exactly `low`
@@ -109,10 +138,26 @@ def colour_by_height(mesh, low=(0, 0, 255), high=(255, 0, 0)):
 
     Hint: mesh.vertex_attribute(key, "color", value) sets it.
     """
-    raise NotImplementedError("colour_by_height")
+    z_coords = {v: float(mesh.vertex_attribute(v, "z")) for v in mesh.vertices()}  # type: ignore
+
+    lowest_z = min(z_coords.values())
+    highest_z = max(z_coords.values())
+    span = highest_z - lowest_z
+
+    if span < 1e-6:
+        for v in mesh.vertices():
+            mesh.vertex_attribute(v, "color", tuple(low))
+        return mesh
+
+    for v, z in z_coords.items():
+        t = (z - lowest_z) / span
+        color = tuple(int(round(low[i] + t * (high[i] - low[i]))) for i in range(3))
+        mesh.vertex_attribute(v, "color", color)
+
+    return mesh
 
 
-def deform_by_wave(mesh, amplitude=1.0, wavelength=4.0):
+def deform_by_wave(mesh: Mesh, amplitude=1.0, wavelength=4.0):
     """Push every vertex up or down by a sine wave along x, IN PLACE.
 
     New z for a vertex = its old z + amplitude * sin(2*pi*x / wavelength)
@@ -128,10 +173,16 @@ def deform_by_wave(mesh, amplitude=1.0, wavelength=4.0):
     Hint: mesh.vertex_attribute(key, "z", new_value) moves a vertex. You do not
     need to touch a single face.
     """
-    raise NotImplementedError("deform_by_wave")
+    for v_key in mesh.vertices():
+        if type(v_key) != int:
+            raise ValueError("Vertex keys must be integers")
+
+        new_val = mesh.vertex_attribute(v_key, "z") + amplitude * math.sin(2 * math.pi * mesh.vertex_attribute(v_key, "x") / wavelength)  # type: ignore
+        mesh.vertex_attribute(v_key, "z", new_val)
+    return mesh
 
 
-def tag_supports(mesh):
+def tag_supports(mesh: Mesh):
     """Mark every BOUNDARY vertex as a support, and every other vertex as not.
 
     - every vertex gets a boolean attribute "is_support"
@@ -155,10 +206,21 @@ def tag_supports(mesh):
     - mesh.vertices_where(is_support=True) reads the attribute back --
       try it once you have set it; it is a query on DATA, not on geometry
     """
-    raise NotImplementedError("tag_supports")
+    support_keys: list[int] = []
+    for v_key in mesh.vertices():
+        if type(v_key) != int:
+            raise ValueError("Vertex keys must be integers")
+
+        if mesh.is_vertex_on_boundary(v_key):
+            mesh.vertex_attribute(v_key, "is_support", True)
+            support_keys.append(v_key)
+        else:
+            mesh.vertex_attribute(v_key, "is_support", False)
+
+    return support_keys
 
 
-def vertex_ring(mesh, key, k):
+def vertex_ring(mesh: Mesh, key, k):
     """Return the set of vertices at most `k` edges away from `key`.
 
     - k = 0  ->  {key}
@@ -182,4 +244,20 @@ def vertex_ring(mesh, key, k):
     - This is a breadth-first search. You will meet it by name next week, on
       graphs -- a mesh's vertices and edges ARE a graph.
     """
-    raise NotImplementedError("vertex_ring")
+    if k < 0:
+        raise ValueError("k must be non-negative")
+
+    current = {key}
+    result = {key}
+    for _ in range(k):
+        if len(current) == 0:
+            break
+
+        new_current = set()
+        for v_key in current:
+            for neigh_key in mesh.vertex_neighbors(v_key):
+                new_current.add(neigh_key)
+                result.add(neigh_key)
+        current = new_current
+
+    return result

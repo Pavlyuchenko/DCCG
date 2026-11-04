@@ -36,13 +36,14 @@ def tally(words):
     Hint: the counting pattern in README section 1.
     """
     tally = {}
-    for item, value in words.items():
+    for item in words:
         if item in tally:
             tally[item] += 1
         else:
             tally[item] = 1
 
     return tally
+
 
 def invert(mapping):
     """Swap the keys and values of a dictionary.
@@ -57,7 +58,11 @@ def invert(mapping):
     -------
     dict
     """
-    raise NotImplementedError("invert")
+    inverted = dict()
+    for key, value in mapping.items():
+        inverted[value] = key
+
+    return inverted
 
 
 def merge_settings(defaults, overrides):
@@ -73,7 +78,14 @@ def merge_settings(defaults, overrides):
     -------
     dict -- a NEW dictionary
     """
-    raise NotImplementedError("merge_settings")
+    new_dict = dict()
+    for k, v in defaults.items():
+        new_dict[k] = v
+
+    for k, v in overrides.items():
+        new_dict[k] = v
+
+    return new_dict
 
 
 def box_on_ground(x, y, size):
@@ -92,7 +104,9 @@ def box_on_ground(x, y, size):
     spans z from -1 to +1. Read the warning in README section 5, then work out
     how high the frame has to be.
     """
-    raise NotImplementedError("box_on_ground")
+    frame = cg.Frame(cg.Point(x, y, size / 2), cg.Vector(1, 0, 0), cg.Vector(0, 1, 0))
+    box = cg.Box(size, size, size, frame)
+    return box
 
 
 def move(shape, dx, dy, dz):
@@ -107,7 +121,7 @@ def move(shape, dx, dy, dz):
     Hint: build a Translation, then use the method that returns a new object
     rather than the one that edits in place. README section 3, the `-ed` rule.
     """
-    raise NotImplementedError("move")
+    return shape.translated(cg.Vector(dx, dy, dz))
 
 
 def rotate_point_about_z(point, degrees):
@@ -123,7 +137,9 @@ def rotate_point_about_z(point, degrees):
     -------
     compas.geometry.Point
     """
-    raise NotImplementedError("rotate_point_about_z")
+    radians = math.radians(degrees)
+    rotation = cg.Rotation.from_axis_and_angle([0, 0, 1], radians)
+    return point.transformed(rotation)
 
 
 def grid_of_boxes(nx, ny, spacing, size):
@@ -143,7 +159,14 @@ def grid_of_boxes(nx, ny, spacing, size):
     Hint: reuse box_on_ground(). Reusing your own tested function instead of
     repeating its logic is the cheapest quality win available to you.
     """
-    raise NotImplementedError("grid_of_boxes")
+    boxes: list[cg.Box] = []
+
+    for y in range(ny):
+        for x in range(nx):
+            new_box = box_on_ground(x * spacing, y * spacing, size)
+            boxes.append(new_box)
+
+    return boxes
 
 
 def flatten_to_xy(points):
@@ -161,4 +184,9 @@ def flatten_to_xy(points):
     write `p.z = 0` you have just silently changed the caller's data -- the
     merge_settings mutation bug from checkpoint 3, now with geometry.
     """
-    raise NotImplementedError("flatten_to_xy")
+    new_points: list[cg.Point] = []
+
+    for p in points:
+        new_points.append(cg.Point(p.x, p.y, 0))
+
+    return new_points
