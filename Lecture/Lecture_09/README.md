@@ -1,65 +1,95 @@
-# Week 09 — Debrief, then Software Engineering I: the dual-mode architecture
+# Week 09 — The timber graph, classes, and a project that can hold components
 
-> In person again. We open with a **debrief and peer code review** of Weeks 07
-> and 08. Bring your checkpoints, working or not. A stuck checkpoint you can
-> describe precisely is more useful to the class than a green one you rushed.
+> **Today, in this order:**
 >
-> ⭐ **Then the hinge of the course.** Everything before it was learning
-> Python and geometry. Everything after it (the tests, the agent work, the
-> final project) assumes the structure you build today.
+> 1. The timber model as a graph: [Part A](#part-a--the-timber-model), then notebook
+>    [`04_timber_model_graph`](notebooks/04_timber_model_graph.ipynb)
+>    (`uv run --extra timber jupyter lab`).
+> 2. Classes: [Week 07](/Lecture/Lecture_07/README.md).
+> 3. A project that can hold components: [Part D](#part-d--a-project-that-can-hold-components) below.
 >
-> `uv run check.py 09`
-
-This lecture has two parts.
-
-- **Part A — reading code, and files.** What an AI assistant actually is, how
-  to review the code it (or a classmate) gives you, and how data gets in and
-  out of your program through files and JSON. The debrief uses the first half;
-  Part B depends on the second.
-- **Part B — the dual-mode architecture.** Core → artifact → adapter: the
-  structure every project in this course has from now on.
+> Parts B and C are the ground Part D stands on. Read them this week if you
+> have not: reading code and JSON (B), core → artifact → adapter (C). Then
+> `uv run check.py 09`.
 
 ---
 
-# Part A — Reading code, and files
+# Part A — The timber model
 
-## A1. What an LLM actually is
+Two earlier weeks meet here. A beam is an object ([Week 07](/Lecture/Lecture_07/README.md)),
+and the model is a graph of them ([Week 06](/Lecture/Lecture_06/README.md)).
 
-You have been using an assistant since Week 01, and you just spent two
-self-paced weeks working mostly with it. Here is what it is doing, and it is
-less than most people assume.
+![A stud wall with a window and a brace, joints coloured L, T and X; the same model drawn as a graph](figures/app-timber.svg)
 
-**A language model predicts plausible continuations of text.** Give it your
-code and your question, and it produces what tends to follow text like that.
-That is the whole mechanism. It is not executing your code, not checking your
-units, not reasoning about your wall.
+[compas_timber](https://gramaziokohler.github.io/compas_timber/latest/)
+(Gramazio Kohler Research, ETH Zürich) keeps a timber model as a **graph**:
+beams are nodes, joints are edges.
 
-Three consequences that matter this week:
+```python
+from compas_timber.elements import Beam
+from compas_timber.model import TimberModel
 
-1. **It is a function, not a colleague.** Same input, same distribution of
-   outputs. It has no memory of yesterday, and within one conversation it only
-   sees what is on screen. If a constraint matters, it has to be in the prompt.
-2. **Fluency is not correctness.** Confident prose, tidy variable names and a
-   well-formed docstring are properties of the *writing*. They are not evidence
-   about the code. This is the single most expensive misunderstanding available
-   to you this semester.
-3. **It fails silently and plausibly.** A human who does not know says so. A
-   model produces its best guess in the same confident voice it uses when
-   right — including inventing methods that do not exist and citing papers that
-   were never written.
+model = TimberModel(tolerance=Tolerance(unit="MM", absolute=1e-3))   # design in mm
+for name, line in stud_wall().items():
+    model.add_element(Beam.from_centerline(line, 60, 120, z_vector=[0, 1, 0]))
 
-It follows that it is strongest where a mistake is cheap and obvious —
-boilerplate, format conversion, a first draft, explaining unfamiliar code — and
-weakest where a mistake is silent: numeric detail, units, edge cases, and
-anything that depends on facts about your project it cannot see.
+model.connect_adjacent_beams()     # find every pair of beams that touch ...
+model.joint_candidates             # ... and HOW: L (ends meet), T (end on middle), X (cross)
+```
 
-In Week 13 you will build the loop that drives one of these, from scratch, and
-this description becomes a piece of code you can read.
+How beams meet is topology; a rule (a dict) turns it into joints:
+
+```python
+JOINT_RULE = {JointTopology.TOPO_L: LButtJoint, JointTopology.TOPO_T: TButtJoint}
+```
+
+`process_joinery()` makes machining features and `BTLxWriter` writes **BTLx**
+for CNC machines: 14 beams, 26 joints, 33 cuts (counted by parsing the file).
+Checked on compas_timber 2.2.0:
+
+| Headless (your uv environment) | Needs Rhino / Grasshopper |
+| ------------------------------ | ------------------------- |
+| beams, the model graph, joint detection (L/T/X) | lap, notch and dovetail joints (e.g. the brace crossing a stud, red in the figure) |
+| butt, miter, tenon-mortise, French-ridge joints | the cut 3D geometry of a beam (`beam.geometry`) |
+| BTLx fabrication files, COMPAS JSON | |
+
+The right column needs Rhino's solid kernel: the architecture of Part C in a real
+tool (logic in Python, geometry kernel in the host). The script reports the X
+crossing instead of crashing. It is an **optional extra**:
+
+```bash
+uv sync --extra timber
+uv run --extra timber Lecture/Lecture_09/applications/timber_frame.py
+```
+
+📄 [`applications/timber_frame.py`](applications/timber_frame.py) ·
+step by step in [`notebooks/`](notebooks/README.md) ·
+then the compas_timber [tutorials](https://gramaziokohler.github.io/compas_timber/latest/) (in Grasshopper).
+
+📝 [A timber frame of your own](/Exercise/Lecture_09/README.md)
+
+---
+
+# Part B — Reading code, and files
+
+## B1. What an LLM actually is
+
+**A language model predicts plausible continuations of text.** It is not executing
+your code, checking your units, or reasoning about your wall. Three consequences:
+
+1. **It is a function, not a colleague.** It has no memory of yesterday, and in a
+   conversation it sees only what is on screen. If a constraint matters, it has to
+   be in the prompt.
+2. **Fluency is not correctness.** Tidy names and a well-formed docstring are
+   properties of the writing, not evidence about the code.
+3. **It fails silently and plausibly**, in the same confident voice it uses when
+   right, including inventing methods that do not exist.
+
+So it is strongest where a mistake is cheap and obvious (boilerplate, format
+conversion, a first draft, explaining code) and weakest where a mistake is silent
+(numeric detail, units, edge cases, anything about your project it cannot see).
 
 ### Asking well
-
-The quality of what comes back tracks the specificity of the request more than
-anything else you control.
 
 | Instead of | Ask |
 | ---------- | --- |
@@ -68,34 +98,13 @@ anything else you control.
 | "is this good?" | "What happens for an empty list? For one item? For a negative area?" |
 | "explain dictionaries" | "Explain line by line what `counts[word] = counts.get(word, 0) + 1` does." |
 
-Four habits worth building now:
-
-- **State the signature you want** — name, parameters, what comes back. You
-  design the interface; let it fill the body.
-- **Paste the real error**, complete, as text.
-- **Ask one thing.** Four requests in a prompt get four mediocre answers.
-- **Ask it to explain rather than produce** when you are trying to learn.
-  Accepted-but-not-understood code is a debt, and Week 13 is when it comes due.
-
-> If you cannot describe what you want precisely enough for a model to build
-> it, you have not finished thinking about the problem. That difficulty is
-> information. In Week 10 this becomes a formal idea: a brief you can turn into
-> a test is a finished brief.
-
-The general, non-course version of this — including where *not* to reach for an
-assistant — is on the lab wiki:
+State the signature you want, paste the real error as text, ask one thing at a
+time, and ask it to explain when you are trying to learn. More on the wiki:
 [AI Assistants](https://kb.rccn.dev/computation/ai-assistants).
 
 ### Reviewing code you did not write
 
-You now know enough Python to review it, and that is the job. It is also
-exactly what the debrief asks you to do with a classmate's Week 07–08 code.
-
-Most of the time a model lands it. When it misses, it misses in ways that look
-fine — which is why review is a procedure and not a feeling.
-
-**The five places to look first** — nearly every bug you will meet this
-semester is one of these:
+**Five places to look first:**
 
 1. **Off-by-one.** `range(1, n)` vs `range(n)`; slice `stop` is excluded.
 2. **Mutable default arguments.** `def f(items=[])` — Week 03's trap. Extremely
@@ -117,10 +126,9 @@ semester is one of these:
 4. **Run it on an example where you already know the answer.** Not one it
    suggested — one you chose.
 
-> "It ran without an error" is not evidence that it is correct. Silent wrong
-> answers are the expensive kind. This is also why Week 10 exists.
+> "It ran without an error" is not evidence that it is correct.
 
-## A2. Files
+## B2. Files
 
 ### Paths — use `pathlib`, always
 
@@ -138,9 +146,8 @@ file.suffix        # '.json'
 folder.mkdir(parents=True, exist_ok=True)   # create it, no error if present
 ```
 
-Never build paths by gluing strings with `"/"` or `"\\"` — that breaks between
-Windows and macOS, and it is the reason half of all "works on my machine"
-problems exist.
+Never build paths by gluing strings with `"/"` or `"\\"`: that breaks between
+Windows and macOS.
 
 **Where does a relative path point?** To your *current working directory* — the
 folder your terminal is in, not the folder the script is in. To get a path
@@ -151,7 +158,7 @@ HERE = Path(__file__).parent
 data = HERE / "data" / "input.json"
 ```
 
-📄 `../python_examples/7.2.1_path.py` … `7.3_pathlib.py`
+📄 `examples/01_path.py` … `05_pathlib.py`
 
 ### Reading and writing
 
@@ -174,18 +181,16 @@ with open(path) as f:
 ```
 
 `with` closes the file for you, **even if an error happens inside the block.**
-That is the whole reason it exists.
 
 Modes: `"r"` read (default), `"w"` write — **erases the file first** — `"a"`
 append.
 
-📄 `../python_examples/7.1.1_write_file.py`, `7.1.2_with_statement.py`, `7.1.3_read_file.py`
+📄 `examples/06_write_file.py`, `07_with_statement.py`, `08_read_file.py`
 
-## A3. JSON
+## B3. JSON
 
-JSON is a text format for structured data. Nearly every tool reads it, which
-is why it is how your geometry will travel between your code, the viewer, git,
-and Rhino.
+JSON is a text format for structured data, and it is how your geometry travels
+between your code, git and Rhino.
 
 ```python
 import json
@@ -197,27 +202,19 @@ Path("wall.json").write_text(json.dumps(data, indent=2))   # write
 loaded = json.loads(Path("wall.json").read_text())          # read back
 ```
 
-`indent=2` makes the file human-readable *and* diffable in git — so a reviewer
-can see what changed between two versions of your design. Always use it.
+`indent=2` makes the file readable and diffable in git. Always use it.
 
 What JSON can hold: `dict`, `list`, `str`, `int`, `float`, `bool`, `None`.
 What it cannot: tuples (they come back as lists), sets, and your own classes.
 
 > COMPAS has its own JSON layer — `compas.json_dump` / `compas.json_load` —
 > which *can* store geometry objects, meshes and graphs. You met it in Week 04
-> and used it on meshes and graphs in Weeks 05–06. Part B is built on it.
+> and used it on meshes and graphs in Weeks 05–06. Part C is built on it.
 
-## A4. Handling errors on purpose
+## B4. Handling errors on purpose
 
-Week 03 covered *reading* a traceback — bottom line first — and the errors you
-meet most. Dictionaries and files add two more to that list:
-
-| Error | Usually means |
-| ----- | ------------- |
-| `KeyError` | that dictionary key does not exist — use `.get()` if absence is normal |
-| `FileNotFoundError` | the path is wrong, or relative to a different folder than you think |
-
-This week is the other half: failure you **expect**, and choose to handle.
+Week 03 covered reading a traceback. This is the other half: failure you
+**expect**, and choose to handle.
 
 ```python
 try:
@@ -226,24 +223,18 @@ except ValueError:
     print("That was not a number.")
 ```
 
-Catch only what you can actually handle, and name it. A bare `except:` swallows
-everything — including the typo you have not found yet — and turns a loud,
-findable bug into a silent, permanent one.
-
-The distinction is worth stating plainly, because it is a design decision you
-will make repeatedly in every core you write from now on:
+Catch only what you can handle, and name it. A bare `except:` swallows everything,
+including the typo you have not found yet.
 
 - A missing key that means **your program is broken** should crash. Let it.
 - A missing key that is **a normal situation** deserves `.get()` or a `try`.
 
-Silencing the first kind is how a wall with eleven courses gets built.
-
-📄 `../python_examples/try_statement.py`
+📄 `examples/09_try_statement.py`
 
 
 ---
 
-# Part B — The dual-mode architecture
+# Part C — The dual-mode architecture
 
 ## 1. The problem
 
@@ -261,21 +252,11 @@ for i in range(12):
 viewer.show()
 ```
 
-It works. It also has no future, for five separate reasons:
-
-1. **You cannot test it.** The interesting logic — the heights, the spacing —
-   is welded to a window. To check the geometry you must look at it.
-2. **You cannot reuse it.** Want this wall inside Grasshopper? Rewrite it.
-3. **You cannot version it meaningfully.** Git stores the code, but no record
-   of what it produced. "Did my change break anything?" is unanswerable.
-4. **An agent cannot work on it.** No return value, no result to inspect — a
-   coding agent is blind to whether it succeeded. (This becomes concrete in
-   Week 13.)
-5. **It cannot run anywhere but your laptop.** No CI, no server, no headless
-   machine.
-
-Every one of those follows from a single mistake: **the geometry logic and the
-program's contact with the outside world are tangled together.**
+It works, but the logic is welded to a window. You cannot test it without looking
+at it, reuse it in Grasshopper, see what it produced in git, let an agent check its
+own work, or run it anywhere without a screen. All of that follows from one mistake:
+**the geometry logic and the program's contact with the outside world are tangled
+together.**
 
 ## 2. The fix: three layers
 
@@ -288,7 +269,7 @@ program's contact with the outside world are tangled together.**
 │ 2. ARTIFACT  COMPAS JSON. The verified result, produced    │  committed to git
 │              headlessly. Previewable without Rhino.        │  reviewable in a diff
 ├────────────────────────────────────────────────────────────┤
-│ 3. ADAPTER   a thin script for Rhino 8 / Grasshopper that  │  boring on purpose
+│ 3. ADAPTER   a thin script for Rhino 8 / Grasshopper that  │  thin on purpose
 │              loads the artifact (or calls the core) and    │  contains NO logic
 │              converts. Deleting it changes nothing.        │
 └────────────────────────────────────────────────────────────┘
@@ -307,11 +288,9 @@ Lecture/Lecture_09/checkpoints/
     └── test_tasks.py    # the checkpoint spec (READ ONLY)
 ```
 
-The **artifact** — `output/wall.json` — is created the first time you run
-`build_artifact`; commit it. The **adapter** — a two-line Rhino script that
-loads that artifact — is what you write in Week 14, not this week; the
-worked example lives at [`Lecture_12/rhino_load.py`](/Lecture/Lecture_12/rhino_load.py)
-for anyone who wants to see it early.
+The **artifact**, `output/wall.json`, is created the first time you run
+`build_artifact`; commit it. Part D turns the **adapter** into a Grasshopper
+component; the simplest one is [`rhino_load.py`](/Lecture/Lecture_09/examples/rhino_load.py).
 
 **The one-sentence rule: keep the intelligence out of the host application.**
 Rhino and Grasshopper only ever *receive* results.
@@ -350,9 +329,6 @@ def make_wall(n_courses, spacing=0.3):
             for i in range(n_courses)]
 ```
 
-The second version can be tested, reused in Grasshopper, called by an agent,
-and run on a server. Same geometry. The difference is entirely structural.
-
 > **Randomness and time are impurities too.** `random.random()` and
 > `datetime.now()` make a function give different answers on different runs,
 > which makes it untestable. Pass a `seed` in as an argument (Week 03) and
@@ -367,22 +343,13 @@ compas.json_dump(boxes, "output/wall.json")   # write
 boxes = compas.json_load("output/wall.json")  # read back, as real Boxes
 ```
 
-Why bother, when you could just re-run the script?
-
-- It is **evidence**. It is what you actually produced, not what you hoped.
-- It is **reviewable**. A diff shows the geometry changed even when the code
-  change looked harmless.
-- It is **portable**. Rhino, Grasshopper, a classmate, and CI all read the same
-  file. No shared environment needed.
-- It is the **hand-off point** between the part that must be correct (core) and
-  the part that must be convenient (viewer, Rhino).
-
-Commit your artifacts. They are small, and they are the record of your work.
+Why not just re-run the script? The artifact is **evidence** of what you produced,
+**reviewable** in a diff even when the code change looked harmless, and **portable**:
+Rhino, a classmate and CI all read the same file. Commit it.
 
 ## 5. Git, at working strength
 
-You have been committing. Now use it as a safety net so you can be reckless
-inside a branch and safe on `main`.
+Use a branch, so you can be reckless there and safe on `main`:
 
 ```bash
 git switch -c feature/wall-bond     # start a branch
@@ -391,9 +358,8 @@ git add -A && git commit -m "wall: alternate course offset"
 git push -u origin feature/wall-bond
 ```
 
-Then open a **pull request** on GitHub. Even working alone, this is worth it:
-the PR page is where you re-read your own diff before it becomes permanent,
-and from Week 14 it is where CI reports whether your tests passed.
+Then open a **pull request** on GitHub. Even alone it is worth it: it is where you
+re-read your own diff, and where CI reports whether the tests passed.
 
 **Writing a commit message.** Say *why*, not *what* — the diff already shows
 what.
@@ -418,9 +384,7 @@ git log --oneline -10   # recent history
 ## 6. Environments, and why the lockfile matters
 
 `uv.lock` records the exact version of every package, including the ones your
-packages depend on. `uv sync` reproduces that set precisely. This is what makes
-"works on my machine" a solvable problem instead of a joke: your machine, mine,
-and GitHub's CI runner all get byte-identical dependencies.
+packages depend on. `uv sync` reproduces that set, on your machine, mine and CI's.
 
 ```bash
 uv sync           # match the lockfile exactly
@@ -431,14 +395,227 @@ uv add numpy      # add a dependency -- and commit BOTH changed files
 
 ---
 
+# Part D — A project that can hold components
+
+From next week you write Grasshopper components in Python, and later package
+them as a plugin. A loose script cannot do that, because other things now have
+to find your code: pytest, the component, the build, a reviewer. This part sets
+up the place they find it, and the four steps you repeat for every component.
+
+The running example is `StudWall` from [Week 07 §9](/Lecture/Lecture_07/README.md#9-a-component-is-a-class).
+The finished version is in the
+[plugin set](/Lecture/Lecture_14/plugin_set/README.md): its
+[core](/Lecture/Lecture_14/plugin_set/src/compas_studio/stud_wall.py),
+[spec](/Lecture/Lecture_14/plugin_set/tests/test_stud_wall.py) and
+[adapter](/Lecture/Lecture_14/plugin_set/components/Cs_StudWall/code.py).
+
+## D1. Scaffold
+
+![The folders of a project: core, spec, adapters, build, pipeline](figures/se-scaffold.svg)
+
+The architecture of Part C, given addresses. Copy the
+[template](/Lecture/Lecture_09/project_template/README.md) **out** of the course
+repo, because a project is a repository of its own:
+
+```bash
+cp -R Lecture/Lecture_09/project_template ~/code/stud_kit
+cd ~/code/stud_kit
+uv sync
+uv run pytest            # 9 passed: it works before you have written anything
+git init && git add -A && git commit -m "scaffold: from the DCCG template"
+```
+
+Its README lists the four things to rename. Two choices in it are deliberate:
+
+- **`src/`**: with the package one level down, you can only import it once it is
+  installed, so tests run against what a user gets and not against whatever is
+  in the current folder.
+- **`requires-python = ">=3.9"`**: Rhino 8 runs Python 3.9, so that is where your
+  core ends up, whatever your laptop has.
+
+### From nothing, by hand
+
+The [template](project_template/README.md) is this, plus a first test, a first
+component and two CI workflows. Do it once by hand to see there is no magic in it:
+
+```bash
+uv init --lib my_tool            # pyproject.toml + src/my_tool/__init__.py
+cd my_tool
+uv add compas                    # a dependency: written to pyproject.toml, pinned in uv.lock
+uv add --dev pytest              # a tool for you, not for your users
+mkdir tests components
+git init && git add -A && git commit -m "scaffold: empty project"
+```
+
+### What each file is for
+
+| File | It answers | You touch it when |
+| --- | --- | --- |
+| `pyproject.toml` | what is this, which Python, which libraries | you add a dependency (`uv add`, never by hand) |
+| `uv.lock` | *exactly* which versions, on every machine | never by hand. Commit it |
+| `src/my_tool/__init__.py` | what does this package offer | you add a public function or class |
+| `src/my_tool/*.py` | the logic | most of the time |
+| `tests/test_*.py` | what does correct mean | **before** you touch `src/` ([Week 10 §14](/Lecture/Lecture_10/README.md#14-the-test-process)) |
+| `components/*/code.py` | how does Grasshopper call it | you add a component |
+| `components/*/metadata.json` | its name, inputs and outputs in Grasshopper | the same moment |
+| `.github/workflows/test.yml` | run the tests on every push | once |
+| `.github/workflows/build-ghuser.yml` | build the components; release on a tag | once ([Week 14](/Lecture/Lecture_14/README.md)) |
+
+## D2. Spec
+
+Start from a brief someone could say out loud:
+
+> *A stud wall: two plates, a stud every `spacing`, studs at both ends. It
+> refuses nonsense.*
+
+Then write each sentence as a test, before the code, in `tests/test_stud_wall.py`:
+
+```python
+import pytest
+from my_tool import StudWall
+
+
+def test_a_stud_closes_both_ends():
+    xs = StudWall(3.0, 2.4, spacing=0.7).stud_positions
+    assert xs[0] == pytest.approx(0.0)
+    assert xs[-1] == pytest.approx(3.0)
+
+
+def test_no_bay_is_wider_than_the_spacing():
+    xs = StudWall(3.0, 2.4, spacing=0.7).stud_positions
+    assert all(b - a <= 0.7 + 1e-9 for a, b in zip(xs, xs[1:]))
+
+
+def test_an_exact_fit_adds_no_extra_stud():
+    assert StudWall(3.6, 2.4, spacing=0.6).n_studs == 7
+
+
+@pytest.mark.parametrize("length, height, spacing", [(0, 2.4, 0.6), (3, 0, 0.6), (3, 2.4, 0), (-1, 2.4, 0.6)])
+def test_rejects_nonsense_input(length, height, spacing):
+    with pytest.raises(ValueError):
+        StudWall(length, height, spacing)
+```
+
+The brief never said what happens when 3.0 m does not divide by 0.7 m. Writing
+the test forced that decision: a stud still closes the end, and the last bay is
+shorter. **If you cannot write the test, you have not finished the brief.**
+
+## D3. Dev
+
+![Brief to spec, then the loop of red, green, refactor, and commit](figures/se-loop.svg)
+
+Run the tests before there is any code. This is what happened, in order:
+
+**Red.** There is no such class yet.
+
+```text
+E   ImportError: cannot import name 'StudWall' from 'my_tool'
+```
+
+**Green, for now.** Write the smallest class in `src/my_tool/stud_wall.py`, and
+export it from `src/my_tool/__init__.py`:
+
+```python
+class StudWall:
+    def __init__(self, length, height, spacing=0.6):
+        self.length = length
+        self.height = height
+        self.spacing = spacing
+
+    @property
+    def stud_positions(self):
+        full_bays = int(self.length / self.spacing)
+        return [i * self.spacing for i in range(full_bays + 1)]
+
+    @property
+    def n_studs(self):
+        return len(self.stud_positions)
+```
+
+**Red again**: no stud closes the far end.
+
+```text
+>       assert xs[-1] == pytest.approx(3.0)
+E       assert 2.8 == 3.0 ± 3.0e-06
+```
+
+Add one with `if xs[-1] < self.length: xs.append(self.length)`. **Red again**,
+and this one nobody would see in a viewer:
+
+```text
+>       assert StudWall(3.6, 2.4, spacing=0.6).n_studs == 7
+E       assert 8 == 7
+```
+
+`6 * 0.6` is `3.5999999999999996`, so the wall looked unfinished and got a second
+stud on top of the last one. Compare with a tolerance (Week 02). Then the
+`ValueError` of Week 07 §5 turns the last test green, and the whole file passes.
+
+**Refactor** now, with the tests as a safety net: rename, simplify, delete. Read
+a failure before you touch the code. `>` is what was claimed and `E` is what
+happened. Decide which of them is wrong; changing a test until it passes is not
+testing.
+
+## D4. Test
+
+| When | Command | Catches |
+| ---- | ------- | ------- |
+| after every change | `uv run pytest` | the mistake you made a minute ago |
+| before you commit | `uv run --python 3.9 pytest` | anything that does not run in Rhino's Python |
+| on every push | the same, by `.github/workflows/test.yml` | "it works on my laptop" |
+
+Good tests here share four habits: they check **properties, not pictures**
+(counts, spans, connectivity); they use `pytest.approx`, never `==` on floats;
+they test the **failure path**; and each one reads as a sentence of the brief.
+Week 10 goes deeper.
+
+The template also ships
+[`tests/test_components.py`](/Lecture/Lecture_09/project_template/tests/test_components.py),
+which checks that every component's `RunScript` and `metadata.json` name the same
+inputs. The build does not compare them, so without this test a renamed input
+stays hidden until you are in Grasshopper.
+
+## D5. Next: the adapter and the build
+
+Next week each core class gets a component. Copy
+`components/Mt_ColumnGrid/` to a new folder, then change three things:
+
+| File | Change |
+| ---- | ------ |
+| `code.py` | the class name (same as the folder), the import, the body of `RunScript` |
+| `metadata.json` | the name, the inputs and outputs |
+| `icon.png` | any 24 × 24 image |
+
+Keep the block at the top of `code.py` as it is: it finds your core inside the
+installed package. Later, you build all of them into a plugin:
+
+![Components and core go into the ghuser-build Docker image; out come .ghuser files and a .yak that Rhino installs](figures/se-build.svg)
+
+```bash
+scripts/ghuser           # components/ -> dist/ghuser/*.ghuser + dist/*.yak
+```
+
+Drag the `.yak` onto Rhino 8 and the components appear in the Grasshopper ribbon.
+Full detail: [Week 14](/Lecture/Lecture_14/README.md).
+
+**Before next week**, install Docker ([Docker Desktop](https://www.docker.com/products/docker-desktop/),
+OrbStack or colima) and keep your project under your home folder, which Docker
+shares by default. Read the line that says `(N components)` when you build: on
+colima, a folder you have just added can take a minute to appear.
+
+> **TBC before next week:** where to get the builder image. `scripts/ghuser` uses
+> `git.rccn.dev:5050/libs/ghuser-builder:1.0.0`. To use another image, run
+> `GHUSER_BUILDER_IMAGE=<name> scripts/ghuser`.
+
+---
+
 ## Checkpoints
 
 ```bash
 uv run check.py 09
 ```
 
-This week you edit **two** files, because the whole point is that they are
-separate:
+This week you edit **two** files, because they are separate:
 
 | File | May contain | May NOT contain |
 | ---- | ----------- | --------------- |
@@ -455,11 +632,9 @@ separate:
 | 3 | `core` stays pure — checked by reading your file, not by running it |
 | 4 | `runner.build_artifact(path, ...)` — core → JSON, round-tripped |
 
-Checkpoint 3 is unusual and worth understanding: it **parses your `core.py`
-and inspects its import statements.** You cannot satisfy it by being careful at
-runtime; the forbidden import must not be in the file at all. Architecture
-rules are much more useful when something enforces them — otherwise they decay
-into good intentions within about two weeks.
+Checkpoint 3 **parses your `core.py` and inspects its imports.** The forbidden
+import must not be in the file at all. An architecture rule that something enforces
+lasts longer than a good intention.
 
 ## Self-test
 
@@ -474,3 +649,6 @@ into good intentions within about two weeks.
 8. What does `uv.lock` give you that `pyproject.toml` alone does not?
 9. Someone hands you a project. What is the fastest check that its layering is
    real rather than aspirational?
+10. Why does `src/my_tool/` make it harder to fool yourself than `my_tool/`?
+11. Your first test fails with `ImportError`. Is that a bad start?
+12. You rename an input in `code.py` and forget `metadata.json`. Which step catches it: the tests, the build, or Rhino?

@@ -2,24 +2,16 @@
 
 ![banner](./Assets/imgs/dccg_banner.png)
 
-The intersection of computational design and digital fabrication has changed how
-we design, analyze, and construct our built environment. Computational geometry
-is at the core of that — from initial form-finding to actual construction — and
-this course explores the algorithms, data structures, geometric operations, and
-design-to-fabrication workflows that let you create high-performance designs,
-intricate geometries, and lightweight parts with minimal material.
+Computational geometry runs from form-finding to construction. This course covers
+the algorithms, data structures and design-to-fabrication workflows behind it.
 
-The newer shift the course takes seriously: **we embrace agentic development —
-building software with AI coding assistants — but we insist on using them
-professionally.** A model can write most of the code now; the scarce skill has
-moved from *typing* it to *specifying, reading, verifying, and owning* it. So
-alongside geometry, you learn the software engineering that keeps AI-written code
-honest: tests, review, version control, and reproducible pipelines. Every week
-the same question returns: *how do you know this is right?*
+We build software with AI coding assistants, and we insist on doing it professionally.
+A model can write most of the code now, so the skills that count are **specifying,
+reading, verifying and owning it**: tests, review, version control and reproducible
+pipelines. Every week the same question returns: *how do you know this is right?*
 
-**By January you build** a small, tested Python + COMPAS design tool that runs
-with or without Rhino — the same core logic usable headlessly, in CI, and inside
-Rhino 8 / Grasshopper through a thin adapter.
+**By January you build** a small, tested Python + COMPAS design tool: the same core
+logic running headlessly, in CI, and inside Grasshopper through a thin adapter.
 
 * E7-125 / E735400 / ARCH3045 · **WED 13:10–15:00** · Computer lab (5102)
 * First session **2026.09.09** · Office hour Wed 15:10–17:00 · ccyen @ gs.ncku.edu.tw
@@ -31,8 +23,7 @@ Rhino 8 / Grasshopper through a thin adapter.
 🎬[Slide Streaming](https://slide-stream.rccn.dev/) — the slides, live during class.
 📑[Decks](https://slides.rccn.dev/courses/DCCG/) — to read again afterwards.
 
-The slides are the room; this repo is the course. If you only do one, read the
-week's lecture — it is searchable, runnable, and available at 3am.
+If you only do one, read the week's lecture. [How the material is organised](/Lecture/README.md): `Lecture_N` is Week N, and each folder has the same shape.
 
 ### Part I — Literacy: read, run, debug (W01–W04)
 
@@ -49,64 +40,55 @@ week's lecture — it is searchable, runnable, and available at 3am.
 | ---- | ---------- | ------- | -------- |
 | 05 | 2026.10.07 | **Mesh** — vertices, faces, halfedges; neighbours and boundaries; attributes as dictionaries; Euler as a free test.<br>👉[Lecture](/Lecture/Lecture_05/README.md) · 🎬[Slides](https://slides.rccn.dev/courses/DCCG/DCCG-W05/) | 📝[Mesh exercise](/Exercise/Lecture_05/README.md) |
 | 06 | 2026.10.14 | **Graphs** — nodes and edges; breadth-first search; shortest paths; connected components; a floor plan and a brick wall as graphs.<br>👉[Lecture](/Lecture/Lecture_06/README.md) · 🎬[Slides](https://slides.rccn.dev/courses/DCCG/DCCG-W06/) | 📝[Circulation graph](/Exercise/Lecture_06/README.md) |
-| 07 | 2026.10.21 | 🚫 self-paced · **OOP** — classes, attributes, methods; a design element as an object.<br>👉[Lecture](/Lecture/Lecture_07/README.md) · 🎬[Slides](https://slides.rccn.dev/courses/DCCG/DCCG-W07/) | 📝[OOP exercises](/Exercise/Lecture_07/README.md) |
+| 07 | 2026.10.21 | 🚫 self-paced · **Classes** — a design element as an object; taught in class in Week 09.<br>👉[Lecture](/Lecture/Lecture_07/README.md) · 🎬[Slides](https://slides.rccn.dev/courses/DCCG/DCCG-W07/) | 📝[OOP exercises](/Exercise/Lecture_07/README.md) |
 | 08 | 2026.10.28 | 🚫 self-paced · **Recursion** — base cases, depth, self-similar geometry; AI as a tutor.<br>👉[Lecture](/Lecture/Lecture_08/README.md) · 🎬[Slides](https://slides.rccn.dev/courses/DCCG/DCCG-W08/) | 📝[Branching tree](/Exercise/Lecture_08/README.md) |
-| 09 | 2026.11.04 | **Debrief + Software Engineering I — the dual-mode architecture** ⭐ — peer review of the self-paced weeks; files, JSON, reviewing AI code; core → artifact → adapter; the `uv` lockfile; git branches and PRs.<br>👉[Lecture](/Lecture/Lecture_09/README.md) · 🎬[Slides](https://slides.rccn.dev/courses/DCCG/DCCG-W09/) | Refactor a script into core + runner |
+| 09 | 2026.11.04 | **The timber graph, classes, and a project** ⭐ — compas_timber's model as a graph, in 3D; why classes, and why a Grasshopper component is one; scaffold, spec, dev, test. Also: files, JSON, core → artifact → adapter.<br>👉[Lecture](/Lecture/Lecture_09/README.md) · 👉[Classes](/Lecture/Lecture_07/README.md) · 📓[Timber graph](/Lecture/Lecture_09/notebooks/04_timber_model_graph.ipynb) · 🎬[Slides](https://slides.rccn.dev/courses/DCCG/DCCG-W09/) | 📝[Timber frame](/Exercise/Lecture_09/README.md) · refactor a script into core + runner · install Docker |
 
 ### Part III — Algorithms: the core, filled (W10–W12)
 
 | Week | Date | Session | Milestone |
 | ---- | ---------- | ------- | --------- |
-| 10 | 2026.11.11 | **Geometric algorithms + testing** — smoothing, curvature, geodesics, subdivision, planar panels, contouring, Voronoi, hull, neighbour search; `pytest`, properties not pictures, theorems as tests.<br>👉[Algorithms](/Lecture/Algorithms/geometric/README.md) · 👉[Testing](/Lecture/Lecture_12/README.md#part-a--testing-week-10) · 🎬[Slides](https://slides.rccn.dev/courses/DCCG/DCCG-W10/) | 🎓 **Final project brief released** |
-| 11 | 2026.11.18 | **Simulation** — cellular automata, boids, growth; global form from local rules; testing what you cannot predict.<br>👉[Lecture](/Lecture/Algorithms/simulation/README.md) · 🎬[Slides](https://slides.rccn.dev/courses/DCCG/DCCG-W11/) | — |
-| 12 | 2026.11.25 | **Optimization + learning** — hill climbing, annealing, genetic search under equal budgets; k-means panel families; regression surrogates and overfitting.<br>👉[Optimization](/Lecture/Algorithms/optimization/README.md) · 👉[Learning](/Lecture/Algorithms/learning/README.md) · 🎬[Slides](https://slides.rccn.dev/courses/DCCG/DCCG-W12/) | 🎓 **Proposal + pitch** |
+| 10 | 2026.11.11 | **Geometric algorithms + testing** — smoothing, curvature, geodesics, subdivision, planar panels, contouring, Voronoi, hull, neighbour search; `pytest`, properties not pictures, theorems as tests; the red → green → refactor loop; one algorithm, one component.<br>👉[Lecture](/Lecture/Lecture_10/README.md) · 🎬[Slides](https://slides.rccn.dev/courses/DCCG/DCCG-W10/) | 🎓 **Final project brief released** |
+| 11 | 2026.11.18 | **Simulation** — cellular automata, boids, growth, agents as objects; global form from local rules; testing what you cannot predict.<br>👉[Lecture](/Lecture/Lecture_11/README.md) · 🎬[Slides](https://slides.rccn.dev/courses/DCCG/DCCG-W11/) | 📝[Agents](/Exercise/Lecture_11/README.md) |
+| 12 | 2026.11.25 | **Optimization + learning** — hill climbing, annealing, genetic search under equal budgets; k-means panel families; regression surrogates and overfitting.<br>👉[Lecture](/Lecture/Lecture_12/README.md) · 🎬[Slides](https://slides.rccn.dev/courses/DCCG/DCCG-W12/) | 🎓 **Proposal + pitch** |
 
-### Part IV — Engineering the workflow with AI (W13–W14)
+### Part IV — Engineering the workflow (W13–W15)
 
-| Week | Date | Session | Milestone |
-| ---- | ---------- | ------- | --------- |
-| 13 | 2026.12.02 | **Code review + LLM-assisted workflow** — the agent loop (build the harness yourself), coder/reviewer with a human gate, pytest as the un-arguable reviewer, PR-based review of each other's projects.<br>👉[Agents](/Lecture/Lecture_11/README.md) · 👉[Review](/Lecture/Lecture_12/README.md#part-b--review-and-the-test-driven-agent-week-13) · 🎬[Slides](https://slides.rccn.dev/courses/DCCG/DCCG-W13/) | 📝 [Agentic lab](/Assignment/6_agentic_workflow/README.md) opens |
-| 14 | 2026.12.09 | **Deploy: Grasshopper components, built in Docker** ⭐ — components without `rhinoscriptsyntax`; the componentizer in a container; the same build on your laptop, under `act`, and in CI.<br>👉[Lecture](/Lecture/Lecture_12/README.md#part-c--deploy-shipping-a-grasshopper-plugin-set-week-14) · 📦[Plugin set](/Lecture/Lecture_12/plugin_set/README.md) · 🎬[Slides](https://slides.rccn.dev/courses/DCCG/DCCG-W14/) | 🎓 **Project iteration 1** |
-
-### Part V — Build (W15–W18)
+The project has existed since Week 09 and its tests since Week 10. Now review, then shipping, and **AI last**: an assistant can only be handed a stage of a pipeline that already exists.
 
 | Week | Date | Session | Milestone |
 | ---- | ---------- | ------- | --------- |
-| 15 | 2026.12.16 | **Project work** — studio session; one-on-ones by register. Optional: [AI models as design ingredients](/Lecture/Lecture_10/README.md) (diffusion, CLIP). | 📝 Agentic lab due |
+| 13 | 2026.12.02 | **Review** — correct is not good; a review checklist; pull requests as the place review happens; CI on the project you scaffolded in Week 09; pairs review each other's first PR.<br>👉[Lecture](/Lecture/Lecture_13/README.md) · 📦[Template](/Lecture/Lecture_09/project_template/README.md) · 🎬[Slides](https://slides.rccn.dev/courses/DCCG/DCCG-W13/) | 🎓 **Project repo scaffolded**: tests green in CI |
+| 14 | 2026.12.09 | **Ship it: Grasshopper components with ghuser-builder** ⭐ — components without `rhinoscriptsyntax`; build, verify and package in one pinned image; the same command on your laptop and in CI; the core travelling inside a `.yak`; a tag is a release.<br>👉[Lecture](/Lecture/Lecture_14/README.md) · 📦[Plugin set](/Lecture/Lecture_14/plugin_set/README.md) · 🎬[Slides](https://slides.rccn.dev/courses/DCCG/DCCG-W14/) | 🎓 **Project iteration 1** |
+| 15 | 2026.12.16 | **Working with AI** — the agent loop, built by hand; coder/reviewer with a human gate; pytest as the reviewer that cannot be fooled; handing an assistant one stage of *your* pipeline. Then project work.<br>👉[Lecture](/Lecture/Lecture_15/README.md) · 🎬[Slides](https://slides.rccn.dev/courses/DCCG/DCCG-W15/) · optional: [AI models as design ingredients](/Lecture/Lecture_15/neural/README.md) | 📝 [Agentic lab](/Assignment/6_agentic_workflow/README.md) opens |
+
+### Part V — Build (W16–W18)
+
+| Week | Date | Session | Milestone |
+| ---- | ---------- | ------- | --------- |
 | 16 | 2026.12.23 | **Final Project — help desk** (register-based one-on-ones).<br>🎬[Slides](https://slides.rccn.dev/courses/DCCG/DCCG-W16/) | 🎓 **Project iteration 2** |
-| 17 | 2026.12.30 | **Final Project — packaging clinic.** Feature freeze: README, install, tests green, artifact committed, adapter verified.<br>🎬[Slides](https://slides.rccn.dev/courses/DCCG/DCCG-W17/) | 🎓 **Feature freeze** |
+| 17 | 2026.12.30 | **Final Project — packaging clinic.** Feature freeze: README, install, tests green, artifact committed, adapter verified.<br>🎬[Slides](https://slides.rccn.dev/courses/DCCG/DCCG-W17/) | 🎓 **Feature freeze** · 📝 Agentic lab due |
 | 18 | 2027.01.06 | 🎓 **Final Presentations** — live demo: the same core, headless *and* in Rhino/Grasshopper.<br>🎬[Slides](https://slides.rccn.dev/courses/DCCG/DCCG-W18/) | 🎓 **Repo due 2027.01.10 23:59** |
 
 ## Grading
 
 **The final project is your grade — 100%.**
 
-The one thing you must do to get there is complete the **Weeks 01–09
-checkpoints**. They aren't scored — `uv run check.py` turns them green and you're
-done — but they are a required completion gate: they are how you actually become
-able to build the project. So the course really has just two things, checkpoints
-and the final.
+You must also complete the **Weeks 01–09 checkpoints**. They are not scored, but they
+are a required gate: `uv run check.py` turns them green.
 
-The project's criteria are in its
-[brief](/Assignment/5_Final_Project/README.md#assessment) — the theme throughout
-is **process is worth more than the artifact.** Everything else is optional
-preparation: the [A0 setup](/Assignment/0_copilot/README.md), the
-[agentic-workflow lab](/Assignment/6_agentic_workflow/README.md) (a dry run of
-the project loop), and the weekly exercises.
+The project's criteria are in its [brief](/Assignment/5_Final_Project/README.md#assessment):
+**process is worth more than the artifact.** Everything else is preparation: the
+[A0 setup](/Assignment/0_copilot/README.md), the
+[agentic-workflow lab](/Assignment/6_agentic_workflow/README.md), the weekly exercises.
 
 ## AI usage
 
-A course should state its AI policy plainly and say *why* it holds ([MIT Ad Hoc
-Committee on AI Use in Teaching, Learning, and Research Training](https://aihub.mit.edu),
-Aug 2026 — report in [`Reference/`](/Reference/AI-Committee-Final-Report.pdf)).
-In that report's terms, this course is **Required use**: you are *expected* to
-build with AI assistants, including on the final project — with two deliberately
-**AI-free** carve-outs.
-
-**Why required, not merely allowed.** A model can write most of this code now,
-so the skill being taught — and assessed — is not typing it but *specifying,
-reading, verifying, and owning* it. Forbidding AI would train the wrong thing;
-using it carelessly would teach nothing. Three rules keep it honest:
+This course is **Required use**, in the terms of the [MIT Ad Hoc Committee on AI Use in
+Teaching, Learning, and Research Training](https://aihub.mit.edu) (Aug 2026, report in
+[`Reference/`](/Reference/AI-Committee-Final-Report.pdf)): you are expected to build with
+AI assistants, including on the final project, because the skill being assessed is
+specifying, reading, verifying and owning code. Three rules:
 
 1. **Explain every line you submit.** "The AI wrote it" is not an answer — and
    at the final demo you will be asked to, live.
@@ -117,6 +99,5 @@ using it carelessly would teach nothing. Three rules keep it honest:
    artifact are evidence; "it looked right in the viewer" is not. You own every
    line you submit, including anything the AI got wrong.
 
-**The AI-free parts.** In the agentic lab, the brief, log, and reflection are
-written **by you, not an LLM** — that reflection *is* the learning. And the
-final **live demo is an oral defense**: no assistant, just you and your code.
+**The AI-free parts.** In the agentic lab, the brief, log and reflection are written
+**by you, not an LLM**. The final **live demo is an oral defense**: just you and your code.

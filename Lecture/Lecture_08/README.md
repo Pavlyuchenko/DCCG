@@ -1,14 +1,6 @@
-# Week 08 — Recursion and self-similar geometry  🚫 *no class this week*
+# Week 08 — Recursion and self-similar geometry
 
-> **2026.10.28 — still at the conference.** Same arrangement as last week:
-> read, run, check yourself, push by Sunday. Week 09 opens with a debrief of
-> both weeks.
-
-If Week 07 went smoothly, this one is shorter. If Week 07 was a struggle,
-finish it first — nothing here depends on classes, so you lose nothing by
-doing them in the other order.
-
----
+> Self-paced on 2026.10.28. Nothing here depends on classes.
 
 ## 1. The idea
 
@@ -30,7 +22,7 @@ Miss either one and you get `RecursionError: maximum recursion depth exceeded`.
 That error means "your function never reached its base case" — read it as a
 logic error, not a limit you need to raise.
 
-📄 `recusion_examples/0_recursion.py`, `2_recursion_limit.py`
+📄 `examples/01_recursion.py`, `02_recursion_limit.py`
 
 ### Tracing it
 
@@ -74,9 +66,7 @@ or self-similar**:
 - a fractal — the definition is literally recursive
 - a folder containing folders; a nested list; a graph traversal
 
-For a flat sequence, a `for` loop is simpler and faster. Recursion is not a
-badge of sophistication; using it where a loop would do is a cost, not a
-flourish.
+For a flat sequence, a `for` loop is simpler and faster.
 
 > **Recursion over structure.** The most useful pattern is not `f(n-1)` but
 > recursing into a nested *shape*:
@@ -105,13 +95,11 @@ almost literally:
 mid = cg.Point(*[(a[i] + b[i]) / 2 for i in range(3)])
 ```
 
-📄 `recusion_examples/3-0_sierpinski_compas_preparation.py`,
-`3-1_sierpinski_compas.py`, `3-2_sierpinski_compas_conditional.py`
+📄 `examples/03_sierpinski_preparation.py`,
+`04_sierpinski.py`, `05_sierpinski_conditional.py`
 
-`3-2` is worth reading closely: it stops recursing **conditionally** — some
-branches go deeper than others. That single change turns a mechanical fractal
-into something that can respond to a site, a load, or an attractor. It is the
-difference between a pattern and a design.
+`3-2` stops recursing **conditionally**, so some branches go deeper than others.
+That one change lets a fractal respond to a site, a load, or an attractor.
 
 ### Branching trees
 
@@ -123,8 +111,8 @@ difference between a pattern and a design.
 Segments at depth `d`: `2**d - 1`. The growth is why depth 20 is not a good
 idea — that is about a million segments.
 
-📄 `recusion_examples/1_turtle_triangle.py`,
-`recusion_examples/heightmap_subdivision.ipynb`
+📄 `examples/06_turtle_triangle.py` · notebook:
+[`notebooks/01_recursion_heightmap.ipynb`](notebooks/01_recursion_heightmap.ipynb)
 
 ## 4. Recursion and purity
 
@@ -152,15 +140,6 @@ def branch(p, d):
 
 Slightly more thinking, and it stays in the core layer where it belongs.
 
-## 5. Optional: classic algorithms
-
-`bin_packing/` and `convex_hull/` are notebooks on two classic computational
-geometry problems — fitting parts onto a sheet, and finding the outline of a
-point cloud. **Not examined**, and no checkpoint depends on them, but both are
-excellent final-project material with real fabrication uses.
-
----
-
 ## Checkpoints
 
 ```bash
@@ -174,9 +153,7 @@ uv run check.py 08
 | 3 | `sierpinski(a, b, c, depth)` | self-similar geometry, `3**depth` |
 | 4 | `tree_segments(length, angle, depth)` | branching, and staying pure |
 
-Checkpoint 4's tests count segments and check lengths rather than looking at a
-picture. Get used to that: **a fractal that looks right and has the wrong
-number of branches is still wrong**, and only one of those two facts is visible.
+Checkpoint 4's tests count segments and check lengths rather than look at a picture.
 
 ## Exercise
 
@@ -189,11 +166,3 @@ number of branches is still wrong**, and only one of those two facts is visible.
 3. Why does moving `print(n)` above or below the recursive call reverse the output?
 4. How many triangles does Sierpinski depth 5 produce? How many segments does a binary tree of depth 12?
 5. Why is appending to a list defined outside the function a bug rather than a style choice?
-
-## Before Sunday
-
-```bash
-uv run check.py 08
-git add -A && git commit -m "Week 08: recursion checkpoints"
-git push
-```

@@ -1,0 +1,22 @@
+# CI -- run the tests on every push and pull request.
+#
+# The core library is pure Python + COMPAS, so this runs on a plain Linux
+# runner with no Rhino, no display, nothing special. This is the "verify"
+# stage of the workflow: nobody -- human or agent -- merges to main until it
+# is green.
+#
+# Python 3.9 on purpose: it is the Python inside Rhino 8, which is where the
+# core finally runs.
+name: tests
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v6
+      - run: uv run --python 3.9 pytest -q

@@ -1,183 +1,136 @@
-# Lecture 11: Agentic Workflows
+# Week 11 — Simulation: global form from local rules
 
-> **Week 13 — code review and the LLM-assisted workflow.** One session, three
-> blocks:
->
-> 1. **Build the loop** (§1–3): the agent harness from scratch, on the
->    course model. *What an assistant actually is.*
-> 2. **Review what it wrote**: [Lecture 12, Part B](/Lecture/Lecture_12/README.md#part-b--review-and-the-test-driven-agent-week-13):
->    pytest as the reviewer that cannot be fooled, then the human review that
->    remains.
-> 3. **Open block: review each other.** Pairs swap final-project repos, open a
->    pull request with one change made *with* an assistant, and review each
->    other's PR against the checklist. This block is deliberately left open, so
->    the session can follow the questions the class actually has.
->
-> The [agentic lab](/Assignment/6_agentic_workflow/README.md) opens this week
-> and is due in Week 15. §4–6 below are reading for the lab.
+> ```bash
+> uv run pytest Lecture/Lecture_11/tests -v      # 17 tests
+> uv run Lecture/Lecture_11/figures/make_figures.py
+> ```
 
-Until now, *you* wrote every line of code. In this lecture we flip the roles:
-a language model writes the code, and you move up one level — you become the
-**planner** and the **reviewer**. This is how modern software teams
-increasingly work with tools like Claude Code, Cursor, and Copilot Agents.
+Everything so far has been **explicit**: you wrote down the geometry, or the
+rule that generates it directly. This week the rules are **local**: each cell,
+agent or particle reacts only to what is next to it. The form is something
+nobody wrote down. It *emerges* from many small decisions, and you find out what
+a rule does by running it.
 
-The goal is not to automate you away. It is to understand, by building one
-from scratch, what these tools actually are — so you can direct them with
-judgment instead of using them as magic.
+That is exciting for design (flocking, growth and self-organisation produce
+forms you would not have drawn) and dangerous for engineering (you cannot read
+the outcome off the code). So every example here comes with tests built like
+experiments:
 
-> We deliberately use our course node's small model (`gemma-4-26b-4bit`,
-> unlimited usage). It fails often, visibly, and instructively. Watching a
-> small model fail teaches you more about agents than watching a frontier
-> model succeed.
+| Kind of test | Example |
+| --- | --- |
+| a **known case** with a known outcome | a blinker blinks with period 2; a glider moves one cell diagonally every 4 generations |
+| an **invariant** that must hold at every step | boid speeds stay within limits; every DLA cell touches an earlier one |
+| a **measured trend**, averaged over runs | alignment raises flock polarization, on average over seeds |
 
-## 1. Concepts
+The last row matters. A random simulation run once is an anecdote. In the boids
+test, single runs ranged from 0.17 to 0.91; only the average is evidence.
 
-### The LLM is a stateless function
-An LLM maps a list of messages to one reply. It has no memory: the
-"conversation" exists only because the caller re-sends the full history each
-time. Whoever controls that message list controls the agent.
+[`examples/agents/`](examples/agents/) has the object-oriented versions of the
+same idea, using the classes of [Week 07](/Lecture/Lecture_07/README.md): ants
+laying pheromone trails, drones chasing targets. In the sections below the state
+lives in **numpy arrays** instead of one object per agent, which is how simulations get
+fast enough to be design tools.
 
-### Agent = LLM + tools + a loop
-The model can only produce text. An **agent** emerges when a program — the
-**harness** — gives the model tools (functions it may request), executes those
-requests, feeds results back, and repeats until the task is done:
+---
 
-```
-while not done:
-    reply = model(messages, tools)
-    if reply requests a tool:
-        result = harness_runs_it()     # our code executes, never the model
-        messages.append(result)        # the model sees what happened
-    else:
-        done
-```
+## 1. Cellular automata: a rule with no geometry in it
 
-Every agent framework (CrewAI, LangGraph, Claude Code) is this loop with more
-engineering around it. In this lecture you will read and modify the loop
-itself — about 40 lines of Python.
+![A glider over four generations; the generations of an R-pentomino stacked into a voxel tower](figures/sim-life.svg)
 
-### Multi-agent = multiple system prompts
-A "coder agent" and a "reviewer agent" are the same model with different
-system prompts, placed at different points of a workflow. The architecture of
-the *workflow* (who talks to whom, who can veto) matters more than the model.
+A grid of cells, alive or dead. Each generation, each cell counts its 8
+neighbours. Conway's Game of Life is the rule **B3/S23**: a dead cell with 3
+live neighbours is *born*, and a live cell with 2 or 3 *survives*. That is the
+whole program. Still lifes, oscillators, and gliders that crawl across the grid
+forever all come out of it.
 
-### What stays human
-| Role | Who does it now |
-|---|---|
-| Writing the brief / spec | **You** (planner) |
-| Typing the code | model |
-| Running it safely | harness |
-| First-pass critique | model (reviewer role) |
-| Deciding "is this actually good?" | **You** (reviewer) |
+**Stack the generations** (generation *t* becomes floor *t*) and a 2D rule grows
+a 3D form. That is the root of a long line of "evolutionary architecture"
+experiments, and an easy final-project starting point: change the rule (B36/S23,
+B3678/S34678 …), and the tower changes character.
 
-The quality ceiling of the whole system is your brief and your judgment.
+Two implementation choices, both pinned by tests:
 
-### Guardrails
-Agents fail in loops, so a harness always has: a step budget (`MAX_STEPS`),
-`temperature=0` (small quantized models hallucinate at higher temperatures),
-defensive parsing (never trust model output), error *feedback* instead of
-crashes, and a **human gate** before executing generated code.
+- **Counting neighbours is eight shifted copies of the array added together.**
+  There is no Python loop over cells, so a 500×500 grid runs as fast as a
+  50×50 one did in a loop.
+- **`step()` returns a new grid.** Updating cells one by one in place lets
+  later cells see their neighbours' *next* state, the same order bug as in
+  [Laplacian smoothing](/Lecture/Lecture_10/README.md#1-smoothing-laplacian-and-taubin).
+- **The border is dead, not wrapped around.** That is a decision, and the test
+  `test_the_border_is_dead_not_wrapped` states it. Change it on purpose, never
+  by accident.
 
-## 2. Setup
+📄 [`examples/cellular_automata.py`](examples/cellular_automata.py)
 
-```bash
-cd DCCG                       # the folder with pyproject.toml / uv.lock
-uv sync                       # openai is already a project dependency
-cp Lecture/Lecture_11/.env.example Lecture/Lecture_11/.env   # paste your class API key
-```
+## 2. Boids: flocking from three rules
 
-Then `cd Lecture/Lecture_11` and run the scripts with `uv run`, e.g.
-`uv run 01_chat.py` — the commands below assume that working directory, and
-`uv run` still finds the project environment from any subfolder.
+![150 boids with no rules, with alignment only, and with all three rules; polarization rises from 0.13 to about 0.9](figures/sim-boids.svg)
 
-Our node at `llm-api.rccn.dev` speaks the OpenAI protocol, so the standard
-`openai` client works — only the `base_url` changes (see `llm.py`).
+Craig Reynolds (1987): each boid sees only neighbours within a radius, and
+steers by **separation** (away from those too close), **alignment** (toward
+their average heading) and **cohesion** (toward their average position). No
+boid knows there is a flock, yet a flock forms. Swap birds for people and you
+have the core of crowd and egress simulation. Swap them for robots and you
+have swarm construction.
 
-## 3. The five steps
+Two things make it a tool rather than a screensaver, and both are algorithms:
 
-Run them in order; each script's docstring explains one idea.
+- **Neighbour search.** "Who is within *r*?" for every boid, every step, is the
+  O(n²) problem from
+  [W10 §9](/Lecture/Lecture_10/README.md#9-nearest-neighbours-the-cost-of-the-obvious).
+  `boids.py` uses the spatial hash, and a test checks it against brute force.
+- **Measurement.** `polarization()` turns "it looks like flocking" into a
+  number: the length of the average heading, 0 for random and 1 for all
+  parallel. With no rules it does not move. With alignment it climbs.
 
-### `01_chat.py` — the LLM is just a function
-One API call, no magic. Watch how "memory" is faked by re-sending history.
+📄 [`examples/boids.py`](examples/boids.py)
 
-### `02_structured.py` — the LLM inside your program
-The model outputs JSON, your code validates it and builds COMPAS geometry.
-The model produces *data*, never touches your program directly.
-```bash
-uv run 02_structured.py "a spiral staircase of 12 steps, going up counter-clockwise"
-uv run view.py output/02_boxes.json
-```
+## 3. Diffusion-limited aggregation: growth by random walk
 
-### `03_agent_loop.py` — tools + loop = agent
-The harness, hand-written. The model places boxes by calling a `place_box`
-tool and sees each result. Watch the log: the model *will* produce malformed
-calls — and correct itself when the harness reports the error back.
-```bash
-uv run 03_agent_loop.py "a bridge spanning 6 meters between two towers"
-uv run view.py output/03_scene.json
-```
+![A DLA cluster of 1500 cells coloured by arrival order, with fractal dimension 1.77](figures/sim-dla.svg)
 
-### `04_coder_reviewer.py` — the multi-agent workflow, with you in it
-A coder agent writes a full COMPAS script; you approve it before it runs
-(the human gate); the harness executes it and feeds crashes back; a reviewer
-agent checks the result against your brief and can send it back for rework.
-```bash
-uv run 04_coder_reviewer.py "an arch made of 15 boxes spanning 5 meters, 3 meters tall"
-uv run view.py output/04_result.json
-```
-Try rejecting the code at the gate with your own feedback. Try a vague brief
-versus a precise one and compare how many rounds each needs.
+One fixed seed cell. Release a particle; it wanders at random until it touches
+the cluster, and sticks. Release the next. The result branches like coral, frost
+or a river delta, because a walker coming from outside meets a **tip** long
+before it finds a way into a fjord, so tips grow and fjords starve.
 
-### `05_mini_harness.py` — a small, FOSS Claude Code
-Step 3 gave the model one narrow tool for one domain (boxes). Step 4 gated
-one generated script. This step combines both ideas into an open-ended
-loop over a *general* tool set — read/write/edit files, run shell commands,
-track a visible todo list — all confined to `./workspace` and gated by you
-before anything touches disk or shell:
-```bash
-uv run 05_mini_harness.py
-uv run 05_mini_harness.py "your own coding task, in plain English"
-```
-This is not a metaphor for how Claude Code, Cursor, or Copilot Agents work —
-it *is* how they work, minus a decade of engineering (context compaction,
-richer sandboxing, parallel tool calls, IDE integration, a much stronger
-model). Read the "Safety note" inside the file before using `--auto`.
+**Fractal dimension** measures how branchy it is: how fast mass grows with
+radius. A line has dimension 1 and a filled disc 2. This cluster measures 1.77,
+and the test requires a value clearly between the two.
 
-## 4. Safety note
+Two engineering details decide whether this takes a second or an hour, and
+neither changes the result: walkers are **launched on a circle just outside the
+cluster** (not anywhere on a huge grid), and a walker that strays too far is
+**killed and relaunched**. Knowing which shortcuts are safe, because they do
+not change the statistics, is most of the craft of simulation.
 
-`04_coder_reviewer.py` executes model-generated Python on your machine, and
-`05_mini_harness.py` lets the model write files and run arbitrary shell
-commands. That is why the human gate exists in both — **read code and
-commands before you approve them**, always. The `--auto` flag (used for
-classroom demos) is exactly the setting you should be suspicious of in real
-tools.
+📄 [`examples/dla.py`](examples/dla.py)
 
-## 5. Things to try
+---
 
-1. In `03`, raise the temperature to 1.0 and watch what happens to the agent.
-2. In `03`, add a `remove_box(index)` tool. What else must change?
-3. In `04`, make the reviewer stricter (e.g., demand a docstring and
-   parametric variables). Does the loop still converge in 5 rounds?
-4. Break it on purpose: ask for geometry the cheat-sheet API cannot express.
-   Where does the failure show up — coder, harness, or reviewer?
-5. In `05`, deny a `bash` call and give the model a comment explaining why.
-   Does it find another way, or does it repeat the same call verbatim?
-6. In `05`, add a `grep`-style search tool. Does the model start using
-   `read_file` less and search more, the way you would?
-7. Compare `04` and `05`: one gates a whole script once, the other gates
-   every disk/shell action individually. What does each buy you, and what
-   does each cost in friction?
+## Exercises
 
-## 6. Outlook
+Write the test first. For a random process, say how many seeds it averages over.
 
-- **Next lecture**: the reviewer agent you met here can be wrong. Lecture 12
-  replaces it with something that can't be argued with — a test suite — and
-  shows how verified geometry ships into Rhino.
-- **Frameworks**: what we hand-rolled here, packaged: CrewAI, LangGraph,
-  the OpenAI Agents SDK. Same loop, more features.
-- **MCP (Model Context Protocol)**: a standard for exposing tools to agents —
-  e.g. driving Rhino directly from an agent (`rhinomcp`).
-- **Agentic coding tools**: Claude Code, Cursor, Copilot Agents — a harness
-  like `05`, with the file system, terminal, and git as tools, and a much
-  stronger model. Your job when using them is the one you practiced today: plan,
-  gate, review.
+1. **Your own rule.** Find a life-like rule (Bxx/Syy) whose stacked tower stays
+   inside a 20×20 footprint for 40 floors without dying out. Test both facts.
+2. **Obstacles.** Add walls to `boids.py` (a fourth steering term, away from the
+   nearest wall point). Test that no boid ever crosses one.
+3. **Egress.** Boids with a goal: a fourth rule toward an exit. Measure the
+   evacuation time for one exit and for two, over 10 seeds. Compare with the
+   Week 06 escape-distance graph: where do they disagree, and why?
+4. **Biased DLA.** Make walkers drift downward (like rain) or stick only from
+   above. How does the fractal dimension change? Predict before running.
+5. **Into geometry.** Turn the DLA cluster into a COMPAS `Graph` (cells = nodes,
+   stuck-to = edges). It is a tree, as in Week 06 §5. Pipe-sweep its edges for a
+   branching structure.
+
+📝 [Agent-based modelling](/Exercise/Lecture_11/README.md): drones that attract and repel.
+
+## Self-test
+
+1. Why must `step()` compute the whole new grid before writing any of it?
+2. The boids test averages polarization over four seeds. Why not use one?
+3. What makes neighbour search, not the steering rules, the expensive part of boids?
+4. Why do DLA tips grow faster than fjords?
+5. Launching DLA walkers near the cluster makes it much faster. Why does it not change the shape?
