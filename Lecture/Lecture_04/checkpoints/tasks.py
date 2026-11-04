@@ -35,8 +35,14 @@ def tally(words):
 
     Hint: the counting pattern in README section 1.
     """
-    raise NotImplementedError("tally")
+    tally = {}
+    for item, value in words.items():
+        if item in tally:
+            tally[item] += 1
+        else:
+            tally[item] = 1
 
+    return tally
 
 def invert(mapping):
     """Swap the keys and values of a dictionary.
