@@ -16,6 +16,7 @@ function that the calls append into. See README section 4 for why.
 """
 
 import math
+from typing import Any
 
 import compas.geometry as cg
 
@@ -34,7 +35,7 @@ def factorial(n):
     raise NotImplementedError("factorial")
 
 
-def flatten(nested):
+def flatten(nested: list[Any]) -> list[int]:
     """Flatten an arbitrarily nested list into a single flat list.
 
     flatten([1, [2, [3, 4]], 5])  ->  [1, 2, 3, 4, 5]
@@ -47,10 +48,22 @@ def flatten(nested):
     Hint: loop over the items. If an item is itself a list, flatten it and
     extend; otherwise append it. `isinstance(item, list)` is your test.
     """
-    raise NotImplementedError("flatten")
+    res: list[int] = []
+    for item in nested:
+        if not isinstance(item, list):
+            res.append(item)
+            continue
+
+        new_item = flatten(item)
+
+        res = [*res, *new_item]
+
+    return res
 
 
-def sierpinski(a, b, c, depth):
+def sierpinski(
+    a: cg.Point, b: cg.Point, c: cg.Point, depth: int
+) -> list[tuple[cg.Point, cg.Point, cg.Point]]:
     """Return the triangles of a Sierpinski subdivision.
 
     Each triangle is a tuple of three compas.geometry.Point objects.
@@ -76,10 +89,25 @@ def sierpinski(a, b, c, depth):
         cg.Point(*[(p[i] + q[i]) / 2 for i in range(3)])
     Build your result by CONCATENATING what the three recursive calls return.
     """
-    raise NotImplementedError("sierpinski")
+    if depth < 0:
+        raise ValueError("WHAT?")
+
+    ab = cg.Point(*[(a[i] + b[i]) / 2 for i in range(3)])  # type: ignore
+    bc = cg.Point(*[(b[i] + c[i]) / 2 for i in range(3)])  # type: ignore
+    ca = cg.Point(*[(c[i] + a[i]) / 2 for i in range(3)])  # type: ignore
+    if depth == 0:
+        return [(a, b, c)]
+
+    return (
+        sierpinski(a, ab, ca, depth - 1)
+        + sierpinski(ab, b, bc, depth - 1)
+        + sierpinski(ca, bc, c, depth - 1)
+    )
 
 
-def tree_segments(length, angle_degrees, depth, scale=0.7):
+def tree_segments(
+    length, angle_degrees, depth, scale=0.7
+) -> list[tuple[cg.Point, cg.Point]]:
     """Return the line segments of a 2D branching tree, growing upward from the origin.
 
     Each segment is a tuple (start_point, end_point) of compas.geometry.Point.
@@ -115,4 +143,32 @@ def tree_segments(length, angle_degrees, depth, scale=0.7):
     - Stay pure: return a new list from each call and concatenate. Do NOT
       append into a list defined outside the function.
     """
-    raise NotImplementedError("tree_segments")
+
+    def helper(
+        start_point: cg.Point, direction_vector: cg.Vector, length: float, depth: int
+    ):
+        if depth == 0:
+            return []
+
+        R = cg.Rotation.from_axis_and_angle([0, 0, 1], math.radians(angle_degrees))
+        new_direction: cg.Vector = direction_vector.transformed(R)
+
+        end_point = start_point + direction_vector * length
+        l1 = helper(end_point, new_direction, length * scale, depth - 1)
+
+        R = cg.Rotation.from_axis_and_angle([0, 0, 1], math.radians(-angle_degrees))
+        new_direction: cg.Vector = direction_vector.transformed(R)
+
+        l2 = helper(end_point, new_direction, length * scale, depth - 1)
+
+        curr = (start_point, end_point)
+
+        return [curr] + l1 + l2
+
+    if depth < 0:
+        raise ValueError("WHAt")
+
+    if depth == 0:
+        return []
+
+    return helper(cg.Point(0, 0), cg.Vector(0, 1, 0), length, depth)

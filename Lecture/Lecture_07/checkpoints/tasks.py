@@ -21,7 +21,7 @@ import math
 import compas.geometry as cg
 
 
-class Vector2D:
+class Vector2D(object):
     """A 2D vector.
 
     Must support:
@@ -42,7 +42,29 @@ class Vector2D:
     """
 
     def __init__(self, x, y):
-        raise NotImplementedError("Vector2D.__init__")
+        self.x = x
+        self.y = y
+
+    def __repr__(self) -> str:
+        return f"Vector2D({self.x}, {self.y})"
+
+    def __add__(self, other):
+        return Vector2D(self.x + other.x, self.y + other.y)
+
+    def __eq__(self, value: object) -> bool:
+        if type(value) != Vector2D:
+            return False
+
+        return self.x == value.x and self.y == value.y
+
+    @property
+    def length(self) -> float:
+        return math.sqrt(math.pow(self.x, 2) + math.pow(self.y, 2))
+
+    def unitized(self):
+        if self.length == 0.0:
+            raise ValueError("ha")
+        return Vector2D(self.x / self.length, self.y / self.length)
 
 
 class Rectangle:
@@ -62,7 +84,10 @@ class Rectangle:
     """
 
     def __init__(self, width, height, x=0, y=0):
-        raise NotImplementedError("Rectangle.__init__")
+        self.width = width
+        self.height = height
+        self.x = x
+        self.y = y
 
 
 class Square(Rectangle):
@@ -109,6 +134,28 @@ class Wall:
     rule matters so much; for now, just keep the class free of them.
     """
 
-    def __init__(self, n_courses, length=2.0, thickness=0.3,
-                 course_height=0.2, offset=0.1):
-        raise NotImplementedError("Wall.__init__")
+    def __init__(
+        self, n_courses, length=2.0, thickness=0.3, course_height=0.2, offset=0.1
+    ):
+        self.n_courses = n_courses
+        self.length = length
+        self.thickness = thickness
+        self.course_height = course_height
+        self.offset = offset
+
+    @property
+    def height(self):
+        return self.n_courses * self.course_height
+
+    def to_boxes(self):
+        boxes = []
+        for i in range(self.n_courses):
+            x = self.offset if i % 2 != 0 else 0.0
+            y = 0.0
+            z = (i + 0.5) * self.course_height
+
+            frame = cg.Frame(cg.Point(x, y, z), [1, 0, 0], [0, 1, 0])
+            box = cg.Box(self.length, self.thickness, self.course_height, frame=frame)
+            boxes.append(box)
+
+        return boxes
